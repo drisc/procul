@@ -1,0 +1,11 @@
+[package]
+name = "paviderm"
+version = "0.1.0"
+
+description = "A minimal terminal Mastodon client"
+authors = ["Cory Driscoll <cory@drisc.io>"]
+
+[dependencies]
+mammut = "0.11.0"
+toml = "0.4.6"
+rustyline = "2.0.1"
