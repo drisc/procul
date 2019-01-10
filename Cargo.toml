@@ -1,5 +1,5 @@
 [package]
-name = "paviderm"
+name = "procul"
 version = "0.1.0"
 
 description = "A minimal terminal Mastodon client"
@@ -9,3 +9,4 @@ authors = ["Cory Driscoll <cory@drisc.io>"]
 mammut = "0.11.0"
 toml = "0.4.6"
 rustyline = "2.0.1"
+ncurses = "5.98.0"
