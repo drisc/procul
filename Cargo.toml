@@ -6,7 +6,7 @@ description = "A minimal terminal Mastodon client"
 authors = ["Cory Driscoll <cory@drisc.io>"]
 
 [dependencies]
-mammut = "0.11.0"
+mammut = "0.12.0"
 toml = "0.4.6"
 rustyline = "2.0.1"
-ncurses = "5.98.0"
+#ncurses = "5.98.0"
