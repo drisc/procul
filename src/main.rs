@@ -24,15 +24,46 @@ fn terminal() {
         let input = rl.readline("[Procul]>> ");
         match input {
             Ok(line) => match line.as_ref() {
-                "quit" => {
+                "q" | "quit" => {
                     println!("Quitting Procul");
                     std::process::exit(0);
                 },
-                "nsp" => {
+                "n" => {
                     println!("Entering Post Mode");
                     new_status();
                 },
-                _ => println!("No input")
+                _ => println!("Invalid input")
+            },
+            Err(_err) => {
+                println!("Unknown Error");
+            }
+        }
+    }
+}
+
+
+fn public_post() -> Result<(), Box<error::Error>> {
+    let mut rl = Editor::<()>::new();
+    let mastodon = register::get_mastodon_data()?;
+
+    loop {
+        let input = rl.readline("[Public]>> ");
+        match input {
+            Ok(line) => {
+                mastodon.new_status(StatusBuilder {
+                    status: String::from(line),
+                    in_reply_to_id: None, //Some(101892808492601451),
+                    media_ids: None,
+                    sensitive: Some(false),
+                    spoiler_text: None,//Some("CW Text".to_string()),
+                    visibility: Some(Public),
+                }).expect("Couldn't post status");
+                println!("Status Posted!");
+                terminal();
+            },
+            Err(ReadlineError::Interrupted) => {
+                println!("CTRL+C");
+                std::process::exit(1);
             },
             Err(_err) => {
                 println!("No input");
@@ -41,7 +72,39 @@ fn terminal() {
     }
 }
 
-fn new_status() -> Result<(), Box<error::Error>>{
+
+fn unlisted_post() -> Result<(), Box<error::Error>> {
+    let mut rl = Editor::<()>::new();
+    let mastodon = register::get_mastodon_data()?;
+
+    loop {
+        let input = rl.readline("[Unlisted]>> ");
+        match input {
+            Ok(line) => {
+                mastodon.new_status(StatusBuilder {
+                    status: String::from(line),
+                    in_reply_to_id: None,
+                    media_ids: None,
+                    sensitive: Some(false),
+                    spoiler_text: None,
+                    visibility: Some(Unlisted),
+                }).expect("Couldn't post status");
+                println!("Status Posted!");
+                terminal();
+            },
+            Err(ReadlineError::Interrupted) => {
+                println!("CTRL+C");
+                std::process::exit(1);
+            },
+            Err(_err) => {
+                println!("No input");
+            }
+        }
+    }
+}
+
+
+fn new_status() -> Result<(), Box<error::Error>> {
 
     let mut rl = Editor::<()>::new();
     let mastodon = register::get_mastodon_data()?;
@@ -54,17 +117,15 @@ fn new_status() -> Result<(), Box<error::Error>>{
                     println!("Returning to terminal...");
                     terminal();
                 },
+                ":public" => {
+                    public_post();
+                },
+                ":unlisted" => {
+                    unlisted_post();
+                },
                 _ => {
-                    mastodon.new_status(StatusBuilder {
-                        status: String::from(line),
-                        in_reply_to_id: None,
-                        media_ids: None,
-                        sensitive: Some(false),
-                        spoiler_text: None,//Some("CW Text".to_string()),
-                        visibility: Some(Public),
-                    }).expect("Couldn't post status");
-                    println!("Status Posted!");
-                    terminal();
+                    println!("Options: ':public', ':unlisted'");
+                    new_status();
                 }
             },
             Err(ReadlineError::Interrupted) => {
