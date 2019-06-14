@@ -32,6 +32,10 @@ fn terminal() {
                     println!("Entering Post Mode");
                     new_status();
                 },
+                "tl" => {
+                    println!("Fetching timeline posts...");
+                    get_timeline();
+                }
                 _ => println!("Invalid input")
             },
             Err(_err) => {
@@ -41,16 +45,21 @@ fn terminal() {
     }
 }
 
+fn get_timeline() -> Result<(), Box<error::Error>> {
+    let _mastodon = register::get_mastodon_data()?;
+    let tl = println!("{:?}", _mastodon.get_home_timeline()?.initial_items);
+    Ok(())
+}
 
 fn public_post() -> Result<(), Box<error::Error>> {
     let mut rl = Editor::<()>::new();
-    let mastodon = register::get_mastodon_data()?;
+    let _mastodon = register::get_mastodon_data()?;
 
     loop {
         let input = rl.readline("[Public]>> ");
         match input {
             Ok(line) => {
-                mastodon.new_status(StatusBuilder {
+                _mastodon.new_status(StatusBuilder {
                     status: String::from(line),
                     in_reply_to_id: None, //Some(101892808492601451),
                     media_ids: None,
@@ -75,13 +84,13 @@ fn public_post() -> Result<(), Box<error::Error>> {
 
 fn unlisted_post() -> Result<(), Box<error::Error>> {
     let mut rl = Editor::<()>::new();
-    let mastodon = register::get_mastodon_data()?;
+    let _mastodon = register::get_mastodon_data()?;
 
     loop {
         let input = rl.readline("[Unlisted]>> ");
         match input {
             Ok(line) => {
-                mastodon.new_status(StatusBuilder {
+                _mastodon.new_status(StatusBuilder {
                     status: String::from(line),
                     in_reply_to_id: None,
                     media_ids: None,
@@ -107,7 +116,7 @@ fn unlisted_post() -> Result<(), Box<error::Error>> {
 fn new_status() -> Result<(), Box<error::Error>> {
 
     let mut rl = Editor::<()>::new();
-    let mastodon = register::get_mastodon_data()?;
+    let _mastodon = register::get_mastodon_data()?;
 
     loop {
         let input = rl.readline("[New Status]>> ");
