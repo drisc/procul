@@ -1,19 +1,13 @@
 extern crate mammut;
 extern crate toml;
+extern crate webbrowser;
 
-use std::{
-    error::Error,
-    fs,
-    io,
-};
+use std::io::prelude::*;
+use std::{error::Error, fs, io};
 
 use self::mammut::{
-    apps::{
-        AppBuilder,
-        Scopes
-    },
-    Mastodon,
-    Registration
+    apps::{AppBuilder, Scopes},
+    Mastodon, Registration,
 };
 
 #[allow(dead_code)]
@@ -21,7 +15,6 @@ fn main() -> Result<(), Box<Error>> {
     register()?;
     Ok(())
 }
-
 
 #[allow(dead_code)]
 pub fn get_mastodon_data() -> Result<Mastodon, Box<Error>> {
@@ -40,12 +33,15 @@ pub fn register() -> Result<Mastodon, Box<Error>> {
         website: Some("https://drisc.io/wiki/procul"),
     };
 
-    let website = read_line("Please enter your mastodon instance url:")?;
-    let mut registration = Registration::new(website.trim());
+    let mut instance_url = String::new();
+    print!("Please enter your mastodon instance url: https://");
+    io::stdout().flush().unwrap();
+    io::stdin().read_line(&mut instance_url).unwrap();
+    let mut registration = Registration::new(format!("https://{}/", instance_url.trim()));
     registration.register(app)?;
     let url = registration.authorise()?;
 
-    println!("Click this link to authorize on Mastodon: {}", url);
+    webbrowser::open(&url).expect("Unable to open browser");
     let input = read_line("Paste the returned authorization code: ")?;
 
     let code = input.trim();
