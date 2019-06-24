@@ -1,13 +1,16 @@
 mod register;
 
+extern crate kuchiki;
 extern crate mammut;
 extern crate rustyline;
 extern crate toml;
 
+use kuchiki::traits::TendrilSink;
+use mammut::entities::status::Status;
 use mammut::status_builder::{StatusBuilder, Visibility::*};
-use std::error;
-
+use mammut::Mastodon;
 use rustyline::{error::ReadlineError, Editor};
+use std::error;
 
 fn main() {
     terminal();
@@ -29,7 +32,8 @@ fn terminal() {
                 }
                 "tl" => {
                     println!("Fetching timeline posts...");
-                    get_timeline();
+                    let _mastodon = register::get_mastodon_data().unwrap();
+                    view_home_tl(_mastodon.clone());
                 }
                 _ => println!("Invalid input"),
             },
@@ -40,11 +44,25 @@ fn terminal() {
     }
 }
 
-fn get_timeline() -> Result<(), Box<error::Error>> {
-    let _mastodon = register::get_mastodon_data()?;
-    let tl = _mastodon.get_home_timeline()?.initial_items;
-    println!("{:?}", tl);
-    Ok(())
+fn display_timeline(timeline: &Vec<Status>) {
+    for status in timeline.iter() {
+        let parser = kuchiki::parse_html();
+        let node_ref = parser.one(&status.content[..]);
+        let text = node_ref.text_contents();
+        println!("@{}: {}", status.account.acct, &text);
+    }
+}
+
+fn view_home_tl(client: Mastodon) {
+    let timeline = match client.get_home_timeline() {
+        Ok(timeline) => timeline,
+        Err(e) => {
+            println!("Could not view timeline: ");
+            println!("{:?}", e);
+            return;
+        }
+    };
+    display_timeline(&timeline.initial_items);
 }
 
 fn public_post() -> Result<(), Box<error::Error>> {

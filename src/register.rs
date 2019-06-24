@@ -33,10 +33,7 @@ pub fn register() -> Result<Mastodon, Box<Error>> {
         website: Some("https://drisc.io/wiki/procul"),
     };
 
-    let mut instance_url = String::new();
-    print!("Please enter your mastodon instance url: https://");
-    io::stdout().flush().unwrap();
-    io::stdin().read_line(&mut instance_url).unwrap();
+    let instance_url = read_line("Please enter your mastodon instance url: https://")?;
     let mut registration = Registration::new(format!("https://{}/", instance_url.trim()));
     registration.register(app)?;
     let url = registration.authorise()?;
@@ -55,10 +52,11 @@ pub fn register() -> Result<Mastodon, Box<Error>> {
 }
 
 pub fn read_line(message: &str) -> Result<String, Box<Error>> {
-    println!("{}", message);
+    print!("{}", message);
 
     let mut input = String::new();
-    io::stdin().read_line(&mut input)?;
+    io::stdout().flush().unwrap();
+    io::stdin().read_line(&mut input).unwrap();
 
     Ok(input)
 }
