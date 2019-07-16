@@ -3,14 +3,14 @@ mod register;
 extern crate cursive;
 extern crate kuchiki;
 extern crate mammut;
-extern crate rustyline;
 extern crate toml;
 
 use cursive::align::HAlign;
 use cursive::theme::{BaseColor, BorderStyle, Color, ColorStyle, PaletteColor, Theme};
 use cursive::traits::*;
+use cursive::utils::markup::StyledString;
 use cursive::views::{
-    Dialog, DummyView, EditView, LinearLayout, ListView, SelectView, TextArea, TextView,
+    BoxView, Dialog, DummyView, EditView, LinearLayout, ListView, SelectView, TextArea, TextView,
 };
 use cursive::Cursive;
 
@@ -19,38 +19,9 @@ use kuchiki::traits::TendrilSink;
 use mammut::entities::status::Status;
 use mammut::status_builder::{StatusBuilder, Visibility::*};
 use mammut::Mastodon;
-use rustyline::{error::ReadlineError, Editor};
 
 fn main() {
     interface();
-}
-
-fn terminal() {
-    let mut rl = Editor::<()>::new();
-    loop {
-        let input = rl.readline("[Procul]>> ");
-        match input {
-            Ok(line) => match line.as_ref() {
-                "q" | "quit" => {
-                    println!("Quitting Procul");
-                    std::process::exit(0);
-                }
-                "n" => {
-                    println!("Entering Post Mode");
-                    new_status();
-                }
-                "tl" => {
-                    println!("Fetching timeline posts...");
-                    let _mastodon = register::get_mastodon_data().unwrap();
-                    view_home_tl(_mastodon.clone());
-                }
-                _ => println!("Invalid input"),
-            },
-            Err(_err) => {
-                println!("Unknown Error");
-            }
-        }
-    }
 }
 
 #[allow(dead_code)]
@@ -84,34 +55,57 @@ pub fn interface() {
                         .child(TextView::new("").h_align(HAlign::Right).fixed_width(30)),
                 )
                 .child(
-                    Dialog::new()
-                        .title("New Post")
-                        .padding((1, 1, 1, 0))
-                        .content(
-                            TextArea::new()
-                                .with_id("post")
-                                .fixed_width(20)
-                                .fixed_height(5),
-                        )
-                        .button("Post", move |s| {
-                            s.call_on_id("post", |view: &mut EditView| {
-                                _mastodon.new_status(StatusBuilder {
-                                    status: view.get_content().to_string(),
-                                    in_reply_to_id: None,
-                                    media_ids: None,
-                                    sensitive: Some(false),
-                                    spoiler_text: None,
-                                    visibility: Some(Public),
+                    LinearLayout::horizontal().child(
+                        Dialog::new()
+                            .title("New Post")
+                            .padding((1, 1, 1, 0))
+                            .content(
+                                TextArea::new()
+                                    .with_id("post")
+                                    .fixed_width(20)
+                                    .fixed_height(5),
+                            )
+                            .button("Post", |s| {
+                                s.call_on_id("post", |view: &mut TextArea| {
+                                    post_status(&view.get_content().to_string());
+                                    view.set_content("");
                                 });
-                            });
-                        }),
+                            }),
+                    ),
                 )
-                .child(DummyView.fixed_height(1)),
+                .child(DummyView.fixed_height(1))
+                .child(BoxView::with_full_width(SelectView::new().with(|list| {
+                    //let timeline = _mastodon.get_home_timeline();
+                    let _mastodon = register::get_mastodon_data().unwrap();
+                    let resp = _mastodon.get_home_timeline().unwrap();
+                    for status in resp.initial_items {
+                        let parser = kuchiki::parse_html();
+                        let node_ref = parser.one(&status.content[..]);
+                        let text = node_ref.text_contents();
+                        let account_name = status.account.acct;
+                        let status_string = format!("@{}: {}", account_name, &text);
+                        let status_id = status.id;
+                        list.add_item(status_string, status_id);
+                        //println!("@{}: {}", account_name, &text);
+                    }
+                }))),
         )
         .h_align(HAlign::Center),
     );
 
     siv.run();
+}
+
+fn post_status(text: &str) {
+    let _mastodon = register::get_mastodon_data().unwrap();
+    _mastodon.new_status(StatusBuilder {
+        status: text.to_string(),
+        in_reply_to_id: None,
+        media_ids: None,
+        sensitive: Some(false),
+        spoiler_text: None,
+        visibility: Some(Public),
+    });
 }
 
 fn theme_terminal(siv: &Cursive) -> Theme {
@@ -156,70 +150,4 @@ fn view_home_tl(client: Mastodon) {
         }
     };
     display_timeline(&timeline.initial_items);
-}
-
-#[allow(dead_code)]
-fn unlisted_post() {
-    let mut rl = Editor::<()>::new();
-    let _mastodon = register::get_mastodon_data().unwrap();
-
-    loop {
-        let input = rl.readline("[Unlisted]>> ");
-        match input {
-            Ok(line) => {
-                _mastodon
-                    .new_status(StatusBuilder {
-                        status: String::from(line),
-                        in_reply_to_id: None,
-                        media_ids: None,
-                        sensitive: Some(false),
-                        spoiler_text: None,
-                        visibility: Some(Unlisted),
-                    })
-                    .expect("Couldn't post status");
-                println!("Status Posted!");
-                terminal();
-            }
-            Err(ReadlineError::Interrupted) => {
-                println!("CTRL+C");
-                std::process::exit(1);
-            }
-            Err(_err) => {
-                println!("No input");
-            }
-        }
-    }
-}
-
-fn new_status() {
-    let mut rl = Editor::<()>::new();
-    let _mastodon = register::get_mastodon_data().unwrap();
-
-    loop {
-        let input = rl.readline("[New Status]>> ");
-        match input {
-            Ok(line) => match line.as_ref() {
-                ":exit" => {
-                    println!("Returning to terminal...");
-                    terminal();
-                }
-                ":public" => {
-                    //public_post();
-                }
-                ":unlisted" => {
-                    unlisted_post();
-                }
-                _ => {
-                    println!("Options: ':public', ':unlisted'");
-                }
-            },
-            Err(ReadlineError::Interrupted) => {
-                println!("CTRL+C");
-                std::process::exit(1);
-            }
-            Err(_err) => {
-                println!("No input");
-            }
-        }
-    }
 }
